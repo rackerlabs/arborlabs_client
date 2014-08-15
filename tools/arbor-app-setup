@@ -30,8 +30,12 @@ from solumclient import client as solum_client
 from solumclient.openstack.common import cliutils
 
 
-PUBLIC_HOSTNAME = 'https://test-api.labs.rs-paas.com'
 SOLUM_API_VERSION = '1'
+PUBLIC_HOSTNAME = 'https://test-api.labs.rs-paas.com'
+PLAN_TEMPLATE = {"version" : 1,
+                 "name": "chef",
+                 "description": "chef testy",
+                 "artifacts": []}
 CREDENTIALS = {}
 
 
@@ -111,17 +115,49 @@ def _filter_trigger_url(url):
 
 
 def get_planfile(plan_templ):
+    if plan_templ:
+        with open(plan_templ, 'r') as f:
+            plan_dict = yaml.load(f)
+    else:
+        plan_dict = dict.copy(PLAN_TEMPLATE)
+        num_artifacts = raw_input("Number of repos to be registered "
+                                  "with Arbor [1]: ")
+        if not num_artifacts:
+            num_artifacts = 1
+        for i in range(int(num_artifacts)):
+            arti = {"name": "chef", "artifact_type": "heroku",
+                    "content": {}, "language_pack": "auto"}
+
+            content_href = ''
+            while not content_href:
+                content_href = raw_input("Repo url: ")
+
+            is_private = raw_input("Is the repo private? [Y]")
+            if not is_private:
+                is_private = True
+            else:
+                is_private = False
+
+            unittest_cmd = raw_input("Entrypoint to run unit "
+                                             "tests [./unit_tests.sh]: ")
+            if not unittest_cmd:
+                unittest_cmd = './unit_tests.sh'
+
+            arti['content']['href'] = content_href
+            if is_private:
+                arti['content']['private'] = 'True'
+            arti['unittest_cmd'] = unittest_cmd
+            plan_dict['artifacts'].append(arti)
+
     # Create a Github token and insert it into plan file
-    with open(plan_templ, 'r') as f:
-        plan_dict = yaml.load(f)
-        for arti in plan_dict['artifacts']:
-            arti['status_token'] = _get_token(arti['content']['href'])
-        plan_file = tempfile.NamedTemporaryFile(suffix='.yaml',
-                                                    prefix='arbor_',
-                                                    delete=False)
-        plan_file.write(yaml.dump(plan_dict, default_flow_style=False))
-        plan_file_name = plan_file.name
-        plan_file.close()
+    for arti in plan_dict['artifacts']:
+        arti['status_token'] = _get_token(arti['content']['href'])
+    plan_file = tempfile.NamedTemporaryFile(suffix='.yaml',
+                                                prefix='arbor_',
+                                                delete=False)
+    plan_file.write(yaml.dump(plan_dict, default_flow_style=False))
+    plan_file_name = plan_file.name
+    plan_file.close()
     return plan_file_name
 
 
@@ -244,6 +280,7 @@ def main(app, plan_templ):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("app_name", help="app name")
-    parser.add_argument("plan_file", help="app plan file")
+    parser.add_argument("plan_file", nargs='?', help="app plan file",
+                        default=None)
     args = parser.parse_args()
     main(args.app_name, args.plan_file)
