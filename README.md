@@ -3,7 +3,7 @@ Arbor application setup instructions
 
 Requirements
  python 2.7+
- 
+
 Quick start
 --------------
 
@@ -15,13 +15,13 @@ $ cd arborlabs_client
 $ virtualenv .arborclient
 $ . .arborclient/bin/activate
 $ python setup.py install
-``` 
+```
 
 2 Load authentication information
 
   - We will create an account for you in Keystone, and provide all the auth info in a file. Assuming that you have stored
     this auth info in a file named `arborlabs.openrc`, you can setup your environment like so:
-    
+
 ```
 export OS_USERNAME=<username>
 export OS_PASSWORD=<password>
@@ -29,12 +29,12 @@ export OS_TENANT_NAME=<tenant>
 export OS_AUTH_URL=https://keystone.labs.rs-paas.com/v2.0
 export OS_REGION_NAME=RegionOne
 ```
-   
-    
+
+
 ```
 $ source arborlabs.openrc
 ```
-    
+
     This will set up environment variables OS_USERNAME, OS_PASSWORD, OS_TENANT_NAME, OS_AUTH_URL, and OS_REGION_NAME.
 
 3 Setup arborlab client for your repository and run tests
@@ -68,6 +68,31 @@ Testing flow steps
    - This will re-trigger tests; check the results in Kibana
 - Merge the pull request
    - This will re-trigger tests; check the results in Kibana
+
+
+Testing Custom Applications
+---------------------------
+
+Arborlab is capable of testing more than just chef cookbooks by utilizing the opensource version of `drone.io`.
+
+Create a `.drone.yml` file in your git repo that looks something like this:
+
+```yaml
+image: python:2
+script:
+  - pip install tox==1.6.1
+  - tox -e pep8
+  - tox -e py27
+```
+
+* image : A docker image available from the public docker hub
+* script : An array of commands to run to perform your tests
+
+Run the arborlab client setting `drone` as the test command:
+
+```console
+$ arbor-app-setup <app_name> --git-uri=<githuburi> --test-cmd=drone [--public]
+```
 
 
 Support
